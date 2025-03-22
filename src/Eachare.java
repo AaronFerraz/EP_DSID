@@ -7,7 +7,8 @@ public class Eachare {
 
         do{
             System.out.println("Escolha um comando: ");
-            System.out.println("\t\t[1] Listar peers"
+            System.out.println(
+                        "\t\t[1] Listar peers"
                     + "\n\t\t[2] Obter peers"
                     + "\n\t\t[3] Listar arquivos locais"
                     + "\n\t\t[4] Buscar arquivos"
@@ -23,6 +24,7 @@ public class Eachare {
                 case 2:
                     break;
                 case 3:
+
                     break;
                 case 4:
                     break;
