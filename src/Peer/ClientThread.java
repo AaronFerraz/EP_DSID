@@ -14,11 +14,9 @@ public class ClientThread implements Runnable{
 
     @Override
     public void run(){
-        try{
-            Socket socket = new Socket(peerInfo.getAddres(), peerInfo.getPort());
+        try(Socket socket = new Socket(peerInfo.getAddres(), peerInfo.getPort());){
             PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
+            //BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
         } catch(Exception e){
 

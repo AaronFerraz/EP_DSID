@@ -1,7 +1,12 @@
+import Peer.Peer;
+
 import java.util.Scanner;
 
 public class Eachare {
     public static void main(String[] args) {
+        String address = "31231";
+        int porta = 3131;
+
         Scanner sc = new Scanner(System.in);
         int opcao = 0;
 
@@ -18,13 +23,14 @@ public class Eachare {
             System.out.print("> ");
             opcao = sc.nextInt();
 
+//            Peer peer = new Peer();
+
             switch (opcao){
                 case 1:
                     break;
                 case 2:
                     break;
                 case 3:
-
                     break;
                 case 4:
                     break;
