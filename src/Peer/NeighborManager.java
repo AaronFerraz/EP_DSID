@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class NeighborManager {
     private String path;
@@ -12,14 +13,15 @@ public class NeighborManager {
         this.path = filePath;
     }
 
-    public static ArrayList<String> createListNeighbors(String filePath){
-        ArrayList<String> listNeibors = new ArrayList<>();
+    public static HashMap<String, String> createListNeighbors(String filePath){
+        HashMap<String, String> listNeibors = new HashMap();
 
         try{
             BufferedReader rd = new BufferedReader(new FileReader(filePath));
             String line;
             while((line = rd.readLine()) != null){
-                listNeibors.add(line);
+                String[] peer = line.split(":");
+                listNeibors.put(peer[0], peer[1]);
             }
         } catch (IOException e){
             System.out.println("Erro ao ler o arquivo: " + e);
