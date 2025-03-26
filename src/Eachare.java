@@ -4,11 +4,39 @@ import java.util.Scanner;
 
 public class Eachare {
     public static void main(String[] args) {
-        String address = "31231";
-        int porta = 3131;
+        String ip,portString;
+        int port;
+
+        String address = "127.0.0.1:54644";
+        String nomeArquivo = "vizinhos.txt";
+        String dirCompartilhado = "~/IdeaProjects/EP_DSID/shared/primeiro/";
+
+        if (args.length == 3) {
+            address = args[0];
+            nomeArquivo = args[1];
+            dirCompartilhado = args[2];
+        }
+
+        if (address.split(":").length != 2) {
+            throw new RuntimeException("Endereço deve seguir o padrão ip:porta");
+        }
+        ip = address.split(":")[0];
+        portString = address.split(":")[1];
+
+        try {
+            port = Integer.parseInt(portString);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("A porta deve ser um número inteiro maior que zero.");
+        } catch (Exception e) {
+            throw new RuntimeException("Parabens");
+        }
+
+        Peer peer = new Peer(ip, port, nomeArquivo, dirCompartilhado);
+
+        new Thread(peer);
 
         Scanner sc = new Scanner(System.in);
-        int opcao = 0;
+        int opcao;
 
         do{
             System.out.println("Escolha um comando: ");
@@ -23,10 +51,9 @@ public class Eachare {
             System.out.print("> ");
             opcao = sc.nextInt();
 
-//            Peer peer = new Peer();
-
             switch (opcao){
                 case 1:
+                    peer.handleSendMessage("HELLO");
                     break;
                 case 2:
                     break;
