@@ -1,35 +1,53 @@
 package Protocol;
 
+import Peer.PeerInfo;
+import logger.Logger;
+import logger.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
 public class MessageHandler {
-    private PrintWriter out;
+    private static final Logger log = LoggerFactory.getLogger(MessageHandler.class);
 
-    public MessageHandler(PrintWriter out){
-        this.out = out;
-    }
-
-    public void sendMessage(String type){
-//      "<ORIGEM> <CLOCK> <TIPO>[ ARGUMENTO1 ARGUMENTO2...] \n"
-        String msg = String.format("<> <> <%s>[ ARGUMENTO1 ARGUMENTO2...] \n", type);
-        out.println(msg);
-    }
-
-    public void handleIncomingMessage(String rawMessage, MessageHelper messageHelper){
-        String[] fields = rawMessage.split(" ", 4);
-
-        if(fields.length < 3){
-            System.out.println("Mensamem inválida: " + rawMessage);
+    public static void handleSendMessage(String message, PeerInfo neighbor) {
+        try (Socket socket = new Socket(neighbor.getIp(), neighbor.getPort());
+             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
+            writer.println(message);
+            neighbor.setStatus("ONLINE");
+        } catch (IOException e) {
+            neighbor.setStatus("OFFLINE");
+            log.log("Falha ao enviar mensagem para %s", neighbor);
+            log.log(" === ERROR!!! === %n%s", e.getMessage());
         }
+    }
 
-        String origem = fields[0];
-        int clock = Integer.parseInt(fields[1]);
-        String tipo = fields[2];
-        String argumentos = "";
+    public static void handleReceiveMessage(Socket clientSocket) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
+            String messageReceived;
+            while ((messageReceived = reader.readLine()) != null) {
+                log.log("Mensagem recebida: %s", messageReceived);
 
-        messageHelper.processMessage(origem, clock, tipo, argumentos);
+                String[] msgSplit = messageReceived.split(" ", 4);
 
+                String source = msgSplit[0];
+                String clock = msgSplit[1];
+                String type = msgSplit[2];
+
+                String args = msgSplit.length == 4 ? msgSplit[3] : "";
+
+                switch (type) {
+                    case "HELLO":
+                        MessageHelper.helloMessage(source, args);
+                        break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }
