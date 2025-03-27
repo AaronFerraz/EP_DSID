@@ -8,7 +8,7 @@ public class Eachare {
         int port;
 
         String address = "127.0.0.1:54644";
-        String nomeArquivo = "vizinhos.txt";
+        String nomeArquivo = "/Users/renanmastropaolo/IdeaProjects/EP_DSID/src/Peer/vizinhos.txt";
         String dirCompartilhado = "~/IdeaProjects/EP_DSID/shared/primeiro/";
 
         if (args.length == 3) {
@@ -33,7 +33,7 @@ public class Eachare {
 
         Peer peer = new Peer(ip, port, nomeArquivo, dirCompartilhado);
 
-        new Thread(peer);
+        new Thread(peer).start();
 
         Scanner sc = new Scanner(System.in);
         int opcao;
@@ -53,7 +53,10 @@ public class Eachare {
 
             switch (opcao){
                 case 1:
-                    peer.handleSendMessage("HELLO");
+                    int listarPeersResult = peer.listarPeers();
+                    if (listarPeersResult > 0) {
+                        peer.handleSendMessage(listarPeersResult, "HELLO");
+                    }
                     break;
                 case 2:
                     break;
