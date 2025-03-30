@@ -25,7 +25,7 @@ public class Peer implements Runnable{
 
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
 
-    public Peer(String ip, int port, String neighborsFilePath, String sharedDirPath){
+    public Peer(String ip, int port, String neighborsFilePath, String sharedDirPath) {
         this.ip = ip;
         this.port = port;
         this.neighborsFilePath = neighborsFilePath;
@@ -37,7 +37,7 @@ public class Peer implements Runnable{
 
     @Override
     public void run() {
-        try (ServerSocket serverSocket = new ServerSocket(port)){
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
             log.log("Servidor iniciado em " + ip + ":" + port);
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -50,6 +50,7 @@ public class Peer implements Runnable{
     }
 
     public String sendMessage(PeerInfo pi, String message, String... arguments) {
+        incrementClock();
         String fullMessage = MessageHelper.createMessage(ip, port, clock, message, arguments);
 
         log.log("Encaminhando mensagem \"%s\" para %s", fullMessage, pi);
@@ -58,6 +59,7 @@ public class Peer implements Runnable{
 
         if (!answer.isBlank()) {
             log.log("Resposta recebida: \"%s\"", answer);
+            incrementClock();
         }
 
         return answer;
@@ -176,6 +178,11 @@ public class Peer implements Runnable{
         );
 
         MessageHandler.handleAnswerMessage(clientSocket, answer);
+    }
+
+    public synchronized void incrementClock() {
+        clock++;
+        log.log("=> Atualizando relogio para %s", clock);
     }
 
     public void bye() {
