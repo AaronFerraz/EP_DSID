@@ -1,5 +1,6 @@
 package Protocol;
 
+import Peer.Peer;
 import Peer.PeerInfo;
 import logger.Logger;
 import logger.LoggerFactory;
@@ -18,14 +19,14 @@ public class MessageHandler {
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
             writer.println(message);
             neighbor.setStatus("ONLINE");
-        } catch (IOException e) {
+        } catch (Exception e) {
             neighbor.setStatus("OFFLINE");
             log.log("Falha ao enviar mensagem para %s", neighbor);
             log.log(" === ERROR!!! === %n%s", e.getMessage());
         }
     }
 
-    public static void handleReceiveMessage(Socket clientSocket) {
+    public static void handleReceiveMessage(Peer peer, Socket clientSocket) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
             String messageReceived;
             while ((messageReceived = reader.readLine()) != null) {
@@ -41,7 +42,8 @@ public class MessageHandler {
 
                 switch (type) {
                     case "HELLO":
-                        MessageHelper.helloMessage(source, args);
+
+                        peer.addNeighbor(source);
                         break;
                 }
             }

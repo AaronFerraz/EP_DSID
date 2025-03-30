@@ -35,7 +35,7 @@ public class Peer implements Runnable{
             log.log("Servidor iniciado em " + ip + ":" + port);
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                new Thread(() -> MessageHandler.handleReceiveMessage(clientSocket)).start();
+                new Thread(() -> MessageHandler.handleReceiveMessage(this, clientSocket)).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -69,6 +69,22 @@ public class Peer implements Runnable{
         }
     }
 
+    public void addNeighbor(String address) {
+        for (PeerInfo pi : neighbors) {
+            if (pi.toString().equals(address)) {
+                pi.setStatus("ONLINE");
+                return;
+            }
+        }
+        neighbors.add(
+                new PeerInfo(
+                        address.split(":")[0],
+                        Integer.parseInt(address.split(":")[1]),
+                        "ONLINE"
+                )
+        );
+    }
+
     public int listarPeers() {
         StringBuilder sb = new StringBuilder();
         AtomicInteger n = new AtomicInteger();
@@ -81,9 +97,13 @@ public class Peer implements Runnable{
         });
 
         System.out.println(sb);
-
         Scanner in = new Scanner(System.in);
+        int escolha;
+        do {
+            escolha = in.nextInt();
+        } while (escolha < 0 || escolha > neighbors.size());
 
-        return in.nextInt();
+
+        return escolha;
     }
 }

@@ -15,8 +15,4 @@ public class MessageHelper {
 
     }
 
-    public static void helloMessage(String source, String args) {
-
-    }
-
 }

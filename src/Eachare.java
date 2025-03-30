@@ -8,8 +8,8 @@ public class Eachare {
         int port;
 
         String address = "127.0.0.1:54644";
-        String nomeArquivo = "/Users/renanmastropaolo/IdeaProjects/EP_DSID/src/Peer/vizinhos.txt";
-        String dirCompartilhado = "~/IdeaProjects/EP_DSID/shared/primeiro/";
+        String nomeArquivo = "files/peer1.txt";
+        String dirCompartilhado = "files/peer1/";
 
         if (args.length == 3) {
             address = args[0];
