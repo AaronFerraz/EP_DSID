@@ -1,4 +1,5 @@
 import Peer.Peer;
+import Peer.PeerInfo;
 
 import java.util.Scanner;
 
@@ -53,12 +54,12 @@ public class Eachare {
 
             switch (opcao){
                 case 1:
-                    int listarPeersResult = peer.listarPeers();
-                    if (listarPeersResult > 0) {
+                    PeerInfo listarPeersResult = peer.listarPeers();
+                    if (listarPeersResult!=null)
                         peer.handleSendMessage(listarPeersResult, "HELLO");
-                    }
                     break;
                 case 2:
+                    peer.handleGetPeers();
                     break;
                 case 3:
                     break;

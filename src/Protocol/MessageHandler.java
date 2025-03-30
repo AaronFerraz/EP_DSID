@@ -5,24 +5,26 @@ import Peer.PeerInfo;
 import logger.Logger;
 import logger.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.Arrays;
 
 public class MessageHandler {
     private static final Logger log = LoggerFactory.getLogger(MessageHandler.class);
 
-    public static void handleSendMessage(String message, PeerInfo neighbor) {
-        try (Socket socket = new Socket(neighbor.getIp(), neighbor.getPort());
-             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
-            writer.println(message);
+    public static String handleSendMessage(String message, PeerInfo neighbor) {
+        try (Socket socket = new Socket(neighbor.getIp(), neighbor.getPort())) {
+            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            dataOutputStream.writeBytes(String.format("%s%n", message));
+            BufferedReader serverBufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             neighbor.setStatus("ONLINE");
+            return serverBufferedReader.readLine();
         } catch (Exception e) {
             neighbor.setStatus("OFFLINE");
             log.log("Falha ao enviar mensagem para %s", neighbor);
             log.log(" === ERROR!!! === %n%s", e.getMessage());
+            throw new RuntimeException();
         }
     }
 
@@ -42,13 +44,25 @@ public class MessageHandler {
 
                 switch (type) {
                     case "HELLO":
-
                         peer.addNeighbor(source);
+                        handleAnswerMessage(clientSocket,"");
+                        break;
+                    case "GET_PEERS":
+                        peer.listarPeersConhecidos(clientSocket, source);
                         break;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static void handleAnswerMessage(Socket clientSocket, String answer) {
+        try {
+            DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+            dataOutputStream.writeBytes(String.format("%s%n", answer));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
