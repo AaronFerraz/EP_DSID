@@ -1,9 +1,14 @@
 import Peer.Peer;
 import Peer.PeerInfo;
+import logger.Logger;
+import logger.LoggerFactory;
 
 import java.util.Scanner;
 
 public class Eachare {
+
+    private static final Logger log = LoggerFactory.getLogger(Eachare.class);
+
     public static void main(String[] args) {
         String ip,portString;
         int port;
@@ -56,12 +61,12 @@ public class Eachare {
                 case 1:
                     PeerInfo listarPeersResult = peer.listarPeers();
                     if (listarPeersResult!=null) {
-                        peer.handleSendMessage(listarPeersResult, "HELLO");
+                        peer.sendMessage(listarPeersResult, "HELLO");
                         listarPeersResult.setStatus("ONLINE");
                     }
                     break;
                 case 2:
-                    peer.handleGetPeers();
+                    peer.getPeers();
                     break;
                 case 3:
                     break;
@@ -72,6 +77,7 @@ public class Eachare {
                 case 6:
                     break;
                 case 9:
+                    peer.bye();
                     opcao = 0;
                     break;
                 default:

@@ -8,6 +8,7 @@ import logger.LoggerFactory;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,6 +21,7 @@ public class Peer implements Runnable{
     private final HashMap<String, PeerInfo> neighbors;
     private final String neighborsFilePath;
     private int clock = 0;
+    private Path path;
 
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
 
@@ -28,6 +30,7 @@ public class Peer implements Runnable{
         this.port = port;
         this.neighborsFilePath = neighborsFilePath;
         this.neighbors = new HashMap<>();
+        this.path = Path.of(sharedDirPath);
 
         vizinhosDiscovery();
     }
@@ -46,7 +49,7 @@ public class Peer implements Runnable{
         }
     }
 
-    public String handleSendMessage(PeerInfo pi, String message, String... arguments) {
+    public String sendMessage(PeerInfo pi, String message, String... arguments) {
         String fullMessage = MessageHelper.createMessage(ip, port, clock, message, arguments);
 
         log.log("Encaminhando mensagem \"%s\" para %s", fullMessage, pi);
@@ -60,10 +63,10 @@ public class Peer implements Runnable{
         return answer;
     }
 
-    public void handleGetPeers() {
+    public void getPeers() {
         ArrayList<PeerInfo> newPeers = new ArrayList<>(neighbors.values());
         for (PeerInfo v : newPeers) {
-            String getPeersAnswer = handleSendMessage(v, "GET_PEERS");
+            String getPeersAnswer = sendMessage(v, "GET_PEERS");
 
             String[] rawMessage = getPeersAnswer.split(" ");
 
@@ -173,5 +176,9 @@ public class Peer implements Runnable{
         );
 
         MessageHandler.handleAnswerMessage(clientSocket, answer);
+    }
+
+    public void bye() {
+
     }
 }
