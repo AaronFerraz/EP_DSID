@@ -39,7 +39,7 @@ public class MessageHandler {
                 String type = msgSplit[2];
 
                 String args = msgSplit.length == 4 ? msgSplit[3] : "";
-
+                peer.incrementClock();
                 switch (type) {
                     case "HELLO":
                         peer.addNeighborByAddress(source);
