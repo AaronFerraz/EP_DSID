@@ -11,7 +11,7 @@ public class MessageHelper {
             msgBuilder.append(" ").append(arg);
         }
 
-        return msgBuilder.toString();
+        return msgBuilder.toString().trim();
 
     }
 

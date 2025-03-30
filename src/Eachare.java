@@ -8,7 +8,7 @@ public class Eachare {
         String ip,portString;
         int port;
 
-        String address = "127.0.0.1:54644";
+        String address = "127.0.0.1:9001";
         String nomeArquivo = "files/peer1.txt";
         String dirCompartilhado = "files/peer1/";
 
@@ -55,8 +55,10 @@ public class Eachare {
             switch (opcao){
                 case 1:
                     PeerInfo listarPeersResult = peer.listarPeers();
-                    if (listarPeersResult!=null)
+                    if (listarPeersResult!=null) {
                         peer.handleSendMessage(listarPeersResult, "HELLO");
+                        listarPeersResult.setStatus("ONLINE");
+                    }
                     break;
                 case 2:
                     peer.handleGetPeers();

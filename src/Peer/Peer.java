@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -60,19 +61,20 @@ public class Peer implements Runnable{
     }
 
     public void handleGetPeers() {
-        neighbors.forEach((k, v) -> {
+        ArrayList<PeerInfo> newPeers = new ArrayList<>(neighbors.values());
+        for (PeerInfo v : newPeers) {
             String getPeersAnswer = handleSendMessage(v, "GET_PEERS");
 
             String[] rawMessage = getPeersAnswer.split(" ");
 
             String source = rawMessage[0];
 
-            addNeighbor(source);
+            addNeighborByAddress(source);
 
             int peerQtt = Integer.parseInt(rawMessage[3]);
 
             if (peerQtt > 0) {
-                for (int j = 4; j <= 3+peerQtt; j++) {
+                for (int j = 4; j <= 3 + peerQtt; j++) {
                     String[] arg = rawMessage[j].split(":");
 
                     String ip = arg[0];
@@ -81,11 +83,11 @@ public class Peer implements Runnable{
                     String endNumber = arg[3];
 
                     if (status.equals("ONLINE")) {
-                        addNeighbor(String.format("%s:%s",ip,port));
+                        addNeighborByAddress(String.format("%s:%s", ip, port));
                     }
                 }
             }
-        });
+        }
     }
 
     private void vizinhosDiscovery() {
@@ -105,7 +107,7 @@ public class Peer implements Runnable{
         }
     }
 
-    public void addNeighbor(String address) {
+    public void addNeighborByAddress(String address) {
         PeerInfo pi = neighbors.get(address);
         if (pi == null) {
             neighbors.put(address, new PeerInfo(
@@ -153,16 +155,16 @@ public class Peer implements Runnable{
 
         StringBuilder sb = new StringBuilder();
 
-        neighborToSend.forEach(n -> {
-            sb.append(n.toString())
-                    .append(":")
-                    .append(n.getStatus())
-                    .append(":")
-                    .append(0)
-                    .append(" ");
-        });
+        neighborToSend.forEach(n ->
+                sb.append(n.toString())
+                .append(":")
+                .append(n.getStatus())
+                .append(":")
+                .append(0)
+                .append(" "));
 
-        String answer = MessageHelper.createMessage(ip,
+        String answer = MessageHelper.createMessage(
+                ip,
                 port,
                 clock,
                 "PEER_LIST",

@@ -7,8 +7,6 @@ import logger.LoggerFactory;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.Arrays;
 
 public class MessageHandler {
     private static final Logger log = LoggerFactory.getLogger(MessageHandler.class);
@@ -18,7 +16,7 @@ public class MessageHandler {
             DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
             dataOutputStream.writeBytes(String.format("%s%n", message));
             BufferedReader serverBufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            neighbor.setStatus("ONLINE");
+
             return serverBufferedReader.readLine();
         } catch (Exception e) {
             neighbor.setStatus("OFFLINE");
@@ -44,10 +42,11 @@ public class MessageHandler {
 
                 switch (type) {
                     case "HELLO":
-                        peer.addNeighbor(source);
+                        peer.addNeighborByAddress(source);
                         handleAnswerMessage(clientSocket,"");
                         break;
                     case "GET_PEERS":
+                        peer.addNeighborByAddress(source);
                         peer.listarPeersConhecidos(clientSocket, source);
                         break;
                 }
