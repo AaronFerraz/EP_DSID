@@ -1,14 +1,48 @@
 import Peer.Peer;
+import Peer.PeerInfo;
+import logger.Logger;
+import logger.LoggerFactory;
 
 import java.util.Scanner;
 
 public class Eachare {
+
+    private static final Logger log = LoggerFactory.getLogger(Eachare.class);
+
     public static void main(String[] args) {
-        String address = "31231";
-        int porta = 3131;
+        String ip,portString;
+        int port;
+
+        String address = "127.0.0.1:9001";
+        String nomeArquivo = "files/peer1.txt";
+        String dirCompartilhado = "files/p1/";
+
+        if (args.length == 3) {
+            address = args[0];
+            nomeArquivo = args[1];
+            dirCompartilhado = args[2];
+        }
+
+        if (address.split(":").length != 2) {
+            throw new RuntimeException("Endereço deve seguir o padrão ip:porta");
+        }
+        ip = address.split(":")[0];
+        portString = address.split(":")[1];
+
+        try {
+            port = Integer.parseInt(portString);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("A porta deve ser um número inteiro maior que zero.");
+        } catch (Exception e) {
+            throw new RuntimeException("Parabens");
+        }
+
+        Peer peer = new Peer(ip, port, nomeArquivo, dirCompartilhado);
+
+        new Thread(peer).start();
 
         Scanner sc = new Scanner(System.in);
-        int opcao = 0;
+        int opcao;
 
         do{
             System.out.println("Escolha um comando: ");
@@ -23,14 +57,23 @@ public class Eachare {
             System.out.print("> ");
             opcao = sc.nextInt();
 
-//            Peer peer = new Peer();
-
             switch (opcao){
                 case 1:
+                    PeerInfo listarPeersResult = peer.listarPeers();
+                    if (listarPeersResult!=null) {
+                        try {
+                            peer.sendMessage(listarPeersResult, "HELLO");
+                            listarPeersResult.setStatus("ONLINE");
+                        } catch (RuntimeException re){
+                            System.out.println("Não deu certo mandar a mensagem");
+                        }
+                    }
                     break;
                 case 2:
+                    peer.getPeers();
                     break;
                 case 3:
+                    peer.showDirectoryShared();
                     break;
                 case 4:
                     break;
@@ -39,11 +82,16 @@ public class Eachare {
                 case 6:
                     break;
                 case 9:
+                    peer.bye();
                     opcao = 0;
+                    System.exit(0);
                     break;
                 default:
                     System.out.println("Não existe essa opção");
+                    break;
             }
         }while(opcao != 0);
+
+        sc.close();
     }
 }

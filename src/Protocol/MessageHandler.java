@@ -1,35 +1,72 @@
 package Protocol;
 
-import java.io.PrintWriter;
+import Peer.Peer;
+import Peer.PeerInfo;
+import logger.Logger;
+import logger.LoggerFactory;
+
+import java.io.*;
 import java.net.Socket;
 
 public class MessageHandler {
-    private PrintWriter out;
+    private static final Logger log = LoggerFactory.getLogger(MessageHandler.class);
 
-    public MessageHandler(PrintWriter out){
-        this.out = out;
-    }
+    public static String handleSendMessage(String message, PeerInfo neighbor) {
+        try (Socket socket = new Socket(neighbor.getIp(), neighbor.getPort())) {
+            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            dataOutputStream.writeBytes(String.format("%s%n", message));
+            BufferedReader serverBufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-    public void sendMessage(String type){
-//      "<ORIGEM> <CLOCK> <TIPO>[ ARGUMENTO1 ARGUMENTO2...] \n"
-        String msg = String.format("<> <> <%s>[ ARGUMENTO1 ARGUMENTO2...] \n", type);
-        out.println(msg);
-    }
-
-    public void handleIncomingMessage(String rawMessage, MessageHelper messageHelper){
-        String[] fields = rawMessage.split(" ", 4);
-
-        if(fields.length < 3){
-            System.out.println("Mensamem inválida: " + rawMessage);
+            return serverBufferedReader.readLine();
+        } catch (Exception e) {
+            neighbor.setStatus("OFFLINE");
+            log.log("Falha ao enviar mensagem para %s", neighbor);
+            log.log(" === ERROR!!! === %n%s", e.getMessage());
+            throw new RuntimeException();
         }
+    }
 
-        String origem = fields[0];
-        int clock = Integer.parseInt(fields[1]);
-        String tipo = fields[2];
-        String argumentos = "";
+    public static void handleReceiveMessage(Peer peer, Socket clientSocket) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
+            String messageReceived;
+            while ((messageReceived = reader.readLine()) != null) {
+                log.log("Mensagem recebida: %s", messageReceived);
 
-        messageHelper.processMessage(origem, clock, tipo, argumentos);
+                String[] msgSplit = messageReceived.split(" ", 4);
 
+                String source = msgSplit[0];
+                String clock = msgSplit[1];
+                String type = msgSplit[2];
+
+                String args = msgSplit.length == 4 ? msgSplit[3] : "";
+                peer.incrementClock();
+
+                switch (type) {
+                    case "HELLO":
+                        peer.addNeighborByAddress(source);
+                        handleAnswerMessage(clientSocket,"");
+                        break;
+                    case "GET_PEERS":
+                        peer.addNeighborByAddress(source);
+                        peer.listarPeersConhecidos(clientSocket, source);
+                        break;
+                    case "BYE":
+                        peer.changeStatusPeer(source);
+                        break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void handleAnswerMessage(Socket clientSocket, String answer) {
+        try {
+            DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+            dataOutputStream.writeBytes(String.format("%s%n", answer));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

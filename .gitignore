@@ -39,3 +39,5 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+echo "files/p1/Por-que-todo-mundo-parece-FELIZ-menos-VOCE.mp4" >> .gitignore
