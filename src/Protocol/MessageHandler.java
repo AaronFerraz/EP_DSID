@@ -40,6 +40,7 @@ public class MessageHandler {
 
                 String args = msgSplit.length == 4 ? msgSplit[3] : "";
                 peer.incrementClock();
+
                 switch (type) {
                     case "HELLO":
                         peer.addNeighborByAddress(source);
@@ -48,6 +49,9 @@ public class MessageHandler {
                     case "GET_PEERS":
                         peer.addNeighborByAddress(source);
                         peer.listarPeersConhecidos(clientSocket, source);
+                        break;
+                    case "BYE":
+                        peer.changeStatusPeer(source);
                         break;
                 }
             }
