@@ -2,7 +2,7 @@
   <configuration default="false" name="EACHare 2" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="Eachare" />
     <module name="EP_DSID" />
-    <option name="PROGRAM_PARAMETERS" value="127.0.0.1:9005 files/peer2.txt files/p2/" />
+    <option name="PROGRAM_PARAMETERS" value="127.0.0.1:9002 files/peer2.txt files/p2/" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
