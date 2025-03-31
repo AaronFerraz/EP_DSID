@@ -40,6 +40,7 @@ public class MessageHandler {
 
                 String args = msgSplit.length == 4 ? msgSplit[3] : "";
                 peer.incrementClock();
+
                 switch (type) {
                     case "HELLO":
                         peer.addNeighborByAddress(source);
@@ -49,13 +50,15 @@ public class MessageHandler {
                         peer.addNeighborByAddress(source);
                         peer.listarPeersConhecidos(clientSocket, source);
                         break;
+                    case "BYE":
+                        peer.changeStatusPeer(source);
+                        break;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
     public static void handleAnswerMessage(Socket clientSocket, String answer) {
         try {
             DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
@@ -64,5 +67,6 @@ public class MessageHandler {
             throw new RuntimeException(e);
         }
     }
+
 
 }

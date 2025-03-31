@@ -15,7 +15,7 @@ public class Eachare {
 
         String address = "127.0.0.1:9001";
         String nomeArquivo = "files/peer1.txt";
-        String dirCompartilhado = "files/peer1/";
+        String dirCompartilhado = "files/p1/";
 
         if (args.length == 3) {
             address = args[0];
@@ -61,14 +61,19 @@ public class Eachare {
                 case 1:
                     PeerInfo listarPeersResult = peer.listarPeers();
                     if (listarPeersResult!=null) {
-                        peer.sendMessage(listarPeersResult, "HELLO");
-                        listarPeersResult.setStatus("ONLINE");
+                        try {
+                            peer.sendMessage(listarPeersResult, "HELLO");
+                            listarPeersResult.setStatus("ONLINE");
+                        } catch (RuntimeException re){
+                            System.out.println("Não deu certo mandar a mensagem");
+                        }
                     }
                     break;
                 case 2:
                     peer.getPeers();
                     break;
                 case 3:
+                    peer.showDirectoryShared();
                     break;
                 case 4:
                     break;
@@ -79,10 +84,14 @@ public class Eachare {
                 case 9:
                     peer.bye();
                     opcao = 0;
+                    System.exit(0);
                     break;
                 default:
                     System.out.println("Não existe essa opção");
+                    break;
             }
         }while(opcao != 0);
+
+        sc.close();
     }
 }

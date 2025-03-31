@@ -8,12 +8,14 @@ import logger.LoggerFactory;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 public class Peer implements Runnable{
     private final String ip;
@@ -143,10 +145,10 @@ public class Peer implements Runnable{
         int escolha;
         PeerInfo pi;
         do {
+            System.out.print("> ");
             escolha = in.nextInt();
             pi = tempPeerMap.get(escolha);
         } while (pi == null && escolha != 0);
-
 
         return pi;
     }
@@ -185,7 +187,36 @@ public class Peer implements Runnable{
         log.log("=> Atualizando relogio para %s", clock);
     }
 
-    public void bye() {
+    public Path getPathDir(){
+        return this.path;
+    }
 
+    public void showDirectoryShared(){
+        try(Stream<Path> paths = Files.list(getPathDir())){
+            paths.map(Path::getFileName).forEach(
+                    System.out::println
+            );
+        } catch(IOException io){
+            io.printStackTrace();
+        }
+    }
+
+    public void changeStatusPeer(String address){
+        if (neighbors.containsKey(address)) {
+            PeerInfo pi = neighbors.get(address);
+            pi.setStatus("OFFLINE");
+        }
+    }
+
+    public void bye() {
+        System.out.println("Saindo...");
+
+        neighbors.forEach((k, p) -> {
+            if (p.getStatus().equals("ONLINE")){
+                sendMessage(p, "BYE");
+            }
+        });
+
+//        Thread.currentThread().interrupt();
     }
 }
