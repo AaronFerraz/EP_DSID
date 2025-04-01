@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -23,7 +22,7 @@ public class Peer implements Runnable{
     private final HashMap<String, PeerInfo> neighbors;
     private final String neighborsFilePath;
     private int clock = 0;
-    private Path path;
+    private final Path path;
 
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
 
@@ -34,20 +33,21 @@ public class Peer implements Runnable{
         this.neighbors = new HashMap<>();
         this.path = Path.of(sharedDirPath);
 
-        vizinhosDiscovery();
     }
 
     @Override
     public void run() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            log.log("Servidor iniciado em " + ip + ":" + port);
+            log.log("Servidor iniciado em " + ip + ":" + port, true);
+            neighborsDiscovery();
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 new Thread(() -> MessageHandler.handleReceiveMessage(this, clientSocket)).start();
             }
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            log.logDebug("Erro ao iniciar o Server socket do peer");
+            log.logDebug(e.getMessage());
+            System.exit(1);
         }
     }
 
@@ -97,7 +97,7 @@ public class Peer implements Runnable{
         }
     }
 
-    private void vizinhosDiscovery() {
+    private void neighborsDiscovery() {
         try (BufferedReader fileReader = new BufferedReader(new FileReader(neighborsFilePath))) {
             String line;
             while ((line = fileReader.readLine()) != null) {
@@ -110,7 +110,9 @@ public class Peer implements Runnable{
             }
         } catch (IOException e) {
             e.printStackTrace();
-            throw new RuntimeException(e);
+            log.logDebug("Arquivo não encontrado");
+            log.logDebug("Programa se encerrando...");
+            System.exit(1);
         }
     }
 
@@ -140,12 +142,12 @@ public class Peer implements Runnable{
             sb.append(String.format("[%s] %s %s %n", n, i, i.getStatus()));
         });
 
-        System.out.println(sb);
+        log.log(sb.toString(), true);
         Scanner in = new Scanner(System.in);
         int escolha;
         PeerInfo pi;
         do {
-            System.out.print("> ");
+            log.log("> ", false);
             escolha = in.nextInt();
             pi = tempPeerMap.get(escolha);
         } while (pi == null && escolha != 0);
@@ -209,7 +211,7 @@ public class Peer implements Runnable{
     }
 
     public void bye() {
-        System.out.println("Saindo...");
+        log.log("Saindo...", true);
 
         neighbors.forEach((k, p) -> {
             if (p.getStatus().equals("ONLINE")){
@@ -218,5 +220,40 @@ public class Peer implements Runnable{
         });
 
 //        Thread.currentThread().interrupt();
+    }
+
+    public static Peer createAndStartPeer(String[] args) {
+        String ip,portString;
+        int port;
+
+        String address = "127.0.0.1:9001";
+        String nomeArquivo = "files/peer1.txt";
+        String dirCompartilhado = "files/p1/";
+
+        if (args.length == 3) {
+            address = args[0];
+            nomeArquivo = args[1];
+            dirCompartilhado = args[2];
+        }
+
+        if (address.split(":").length != 2) {
+            throw new RuntimeException("Endereço deve seguir o padrão ip:porta");
+        }
+        ip = address.split(":")[0];
+        portString = address.split(":")[1];
+
+        try {
+            port = Integer.parseInt(portString);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("A porta deve ser um número inteiro maior que zero.");
+        } catch (Exception e) {
+            //Como vc chegou aqui?
+            throw new RuntimeException("Parabens");
+        }
+
+        Peer peer = new Peer(ip, port, nomeArquivo, dirCompartilhado);
+        new Thread(peer).start();
+
+        return peer;
     }
 }

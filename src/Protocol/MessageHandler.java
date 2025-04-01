@@ -22,7 +22,8 @@ public class MessageHandler {
             neighbor.setStatus("OFFLINE");
             log.log("Falha ao enviar mensagem para %s", neighbor);
             log.log(" === ERROR!!! === %n%s", e.getMessage());
-            throw new RuntimeException();
+
+            return "";
         }
     }
 
