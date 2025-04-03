@@ -13,13 +13,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+
+import static Peer.PeerHandler.*;
 
 public class Peer implements Runnable{
     private final String ip;
     private final int port;
-    private final HashMap<String, PeerInfo> neighbors;
     private final String neighborsFilePath;
     private int clock = 0;
     private final Path path;
@@ -30,7 +30,6 @@ public class Peer implements Runnable{
         this.ip = ip;
         this.port = port;
         this.neighborsFilePath = neighborsFilePath;
-        this.neighbors = new HashMap<>();
         this.path = Path.of(sharedDirPath);
 
     }
@@ -68,29 +67,30 @@ public class Peer implements Runnable{
     }
 
     public void getPeers() {
-        ArrayList<PeerInfo> newPeers = new ArrayList<>(neighbors.values());
+        ArrayList<PeerInfo> newPeers = new ArrayList<>(getNeighborsAsList());
         for (PeerInfo v : newPeers) {
             String getPeersAnswer = sendMessage(v, "GET_PEERS");
+            if (!getPeersAnswer.isBlank()) {
+                String[] rawMessage = getPeersAnswer.split(" ");
 
-            String[] rawMessage = getPeersAnswer.split(" ");
+                String source = rawMessage[0];
 
-            String source = rawMessage[0];
+                addNeighborByAddress(source);
 
-            addNeighborByAddress(source);
+                int peerQtt = Integer.parseInt(rawMessage[3]);
 
-            int peerQtt = Integer.parseInt(rawMessage[3]);
+                if (peerQtt > 0) {
+                    for (int j = 4; j <= 3 + peerQtt; j++) {
+                        String[] arg = rawMessage[j].split(":");
 
-            if (peerQtt > 0) {
-                for (int j = 4; j <= 3 + peerQtt; j++) {
-                    String[] arg = rawMessage[j].split(":");
+                        String ip = arg[0];
+                        int port = Integer.parseInt(arg[1]);
+                        String status = arg[2];
+                        String endNumber = arg[3];
 
-                    String ip = arg[0];
-                    int port = Integer.parseInt(arg[1]);
-                    String status = arg[2];
-                    String endNumber = arg[3];
-
-                    if (status.equals("ONLINE")) {
-                        addNeighborByAddress(String.format("%s:%s", ip, port));
+                        if (status.equals("ONLINE")) {
+                            addNeighborByAddress(String.format("%s:%s", ip, port));
+                        }
                     }
                 }
             }
@@ -105,7 +105,7 @@ public class Peer implements Runnable{
                 if (parts.length == 2) {
                     String ip = parts[0];
                     int port = Integer.parseInt(parts[1]);
-                    neighbors.put(String.format("%s:%s",ip,port), new PeerInfo(ip, port, "OFFLINE"));
+                    addNeighbor(String.format("%s:%s",ip,port), new PeerInfo(ip, port, "OFFLINE"));
                 }
             }
         } catch (IOException e) {
@@ -117,13 +117,14 @@ public class Peer implements Runnable{
     }
 
     public void addNeighborByAddress(String address) {
-        PeerInfo pi = neighbors.get(address);
+        PeerInfo pi = getNeighbor(address);
         if (pi == null) {
-            neighbors.put(address, new PeerInfo(
+            addNeighbor(address, new PeerInfo(
                     address.split(":")[0],
                     Integer.parseInt(address.split(":")[1]),
                     "ONLINE"
             ));
+
         }
         else if (pi.getStatus().equals("OFFLINE")){
             pi.setStatus("ONLINE");
@@ -132,17 +133,11 @@ public class Peer implements Runnable{
 
     public PeerInfo listarPeers() {
         HashMap<Integer, PeerInfo> tempPeerMap = new HashMap<>();
-        StringBuilder sb = new StringBuilder();
-        AtomicInteger n = new AtomicInteger();
-        sb.append(String.format("[%s] voltar para o menu anterior %n", n));
 
-        neighbors.forEach((k,i) -> {
-            n.getAndIncrement();
-            tempPeerMap.put(n.get(), i);
-            sb.append(String.format("[%s] %s %s %n", n, i, i.getStatus()));
-        });
+        String sb = String.format("[%s] voltar para o menu anterior %n", 0) +
+                buildGetPeersMessage(tempPeerMap);
 
-        log.log(sb.toString(), true);
+        log.log(sb, true);
         Scanner in = new Scanner(System.in);
         int escolha;
         PeerInfo pi;
@@ -156,11 +151,7 @@ public class Peer implements Runnable{
     }
 
     public void listarPeersConhecidos(Socket clientSocket, String source) {
-        ArrayList<PeerInfo> neighborToSend = new ArrayList<PeerInfo>();
-
-        neighbors.forEach((k, v) -> {
-            if (!k.equals(source)) neighborToSend.add(v);
-        });
+        ArrayList<PeerInfo> neighborToSend = new ArrayList<PeerInfo>(getNeighborsToSend(source));
 
         StringBuilder sb = new StringBuilder();
 
@@ -204,20 +195,13 @@ public class Peer implements Runnable{
     }
 
     public void changeStatusPeer(String address){
-        if (neighbors.containsKey(address)) {
-            PeerInfo pi = neighbors.get(address);
-            pi.setStatus("OFFLINE");
-        }
+        PeerHandler.changePeerStatus(address );
     }
 
     public void bye() {
         log.log("Saindo...", true);
 
-        neighbors.forEach((k, p) -> {
-            if (p.getStatus().equals("ONLINE")){
-                sendMessage(p, "BYE");
-            }
-        });
+        exit(this);
 
 //        Thread.currentThread().interrupt();
     }

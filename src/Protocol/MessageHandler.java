@@ -16,6 +16,7 @@ public class MessageHandler {
             DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
             dataOutputStream.writeBytes(String.format("%s%n", message));
             BufferedReader serverBufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            neighbor.setStatus("ONLINE");
 
             return serverBufferedReader.readLine();
         } catch (Exception e) {
@@ -53,6 +54,7 @@ public class MessageHandler {
                         break;
                     case "BYE":
                         peer.changeStatusPeer(source);
+                        handleAnswerMessage(clientSocket,"");
                         break;
                 }
             }

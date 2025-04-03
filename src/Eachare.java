@@ -34,7 +34,6 @@ public class Eachare {
                     if (listarPeersResult!=null) {
                         try {
                             peer.sendMessage(listarPeersResult, "HELLO");
-                            listarPeersResult.setStatus("ONLINE");
                         } catch (RuntimeException re){
                             log.log("Não deu certo mandar a mensagem", true);
                         }
