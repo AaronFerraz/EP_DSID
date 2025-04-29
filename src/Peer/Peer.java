@@ -131,6 +131,16 @@ public class Peer implements Runnable{
         }
     }
 
+    public void hello(PeerInfo listarPeersResult) {
+        if (listarPeersResult !=null) {
+            try {
+                sendMessage(listarPeersResult, "HELLO");
+            } catch (RuntimeException re){
+                log.log("Não deu certo mandar a mensagem", true);
+            }
+        }
+    }
+
     public PeerInfo listarPeers() {
         HashMap<Integer, PeerInfo> tempPeerMap = new HashMap<>();
 

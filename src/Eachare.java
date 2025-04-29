@@ -31,13 +31,7 @@ public class Eachare {
             switch (opcao){
                 case 1:
                     PeerInfo listarPeersResult = peer.listarPeers();
-                    if (listarPeersResult!=null) {
-                        try {
-                            peer.sendMessage(listarPeersResult, "HELLO");
-                        } catch (RuntimeException re){
-                            log.log("Não deu certo mandar a mensagem", true);
-                        }
-                    }
+                    peer.hello(listarPeersResult);
                     break;
                 case 2:
                     peer.getPeers();
@@ -63,5 +57,6 @@ public class Eachare {
 
         sc.close();
     }
+
 
 }
