@@ -37,11 +37,11 @@ public class MessageHandler {
                 String[] msgSplit = messageReceived.split(" ", 4);
 
                 String source = msgSplit[0];
-                String clock = msgSplit[1];
+                int clock = Integer.parseInt(msgSplit[1]);
                 String type = msgSplit[2];
 
                 String args = msgSplit.length == 4 ? msgSplit[3] : "";
-                peer.incrementClock();
+                peer.incrementClock(clock);
 
                 switch (type) {
                     case "HELLO":
@@ -59,7 +59,7 @@ public class MessageHandler {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.logDebug(e.getMessage());
         }
     }
 
