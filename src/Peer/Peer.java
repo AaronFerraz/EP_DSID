@@ -21,7 +21,7 @@ public class Peer implements Runnable{
     private final String ip;
     private final int port;
     private final String neighborsFilePath;
-    private int clock = 0;
+    private final LamportClock lamportClock;
     private final Path path;
 
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
@@ -31,7 +31,7 @@ public class Peer implements Runnable{
         this.port = port;
         this.neighborsFilePath = neighborsFilePath;
         this.path = Path.of(sharedDirPath);
-
+        this.lamportClock = new LamportClock();
     }
 
     @Override
@@ -51,8 +51,8 @@ public class Peer implements Runnable{
     }
 
     public String sendMessage(PeerInfo pi, String message, String... arguments) {
-        incrementClock();
-        String fullMessage = MessageHelper.createMessage(ip, port, clock, message, arguments);
+        incrementClock(0);
+        String fullMessage = MessageHelper.createMessage(ip, port, lamportClock.getClock(), message, arguments);
 
         log.log("Encaminhando mensagem \"%s\" para %s", fullMessage, pi);
 
@@ -60,7 +60,6 @@ public class Peer implements Runnable{
 
         if (!answer.isBlank()) {
             log.log("Resposta recebida: \"%s\"", answer);
-            incrementClock();
         }
 
         return answer;
@@ -74,6 +73,8 @@ public class Peer implements Runnable{
                 String[] rawMessage = getPeersAnswer.split(" ");
 
                 String source = rawMessage[0];
+                int externalClock = Integer.parseInt(rawMessage[1]);
+                incrementClock(externalClock);
 
                 addNeighborByAddress(source);
 
@@ -109,7 +110,7 @@ public class Peer implements Runnable{
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.logDebug(e.getMessage());
             log.logDebug("Arquivo não encontrado");
             log.logDebug("Programa se encerrando...");
             System.exit(1);
@@ -176,7 +177,7 @@ public class Peer implements Runnable{
         String answer = MessageHelper.createMessage(
                 ip,
                 port,
-                clock,
+                lamportClock.getClock(),
                 "PEER_LIST",
                 String.valueOf(neighborToSend.size()),
                 sb.toString().trim()
@@ -185,9 +186,13 @@ public class Peer implements Runnable{
         MessageHandler.handleAnswerMessage(clientSocket, answer);
     }
 
-    public synchronized void incrementClock() {
-        clock++;
-        log.log("=> Atualizando relogio para %s", clock);
+    public synchronized void incrementClock(int externalClock) {
+        int newClock = Math.max(externalClock, getClock());
+        lamportClock.incrementClock(newClock);
+    }
+
+    public synchronized int getClock() {
+        return lamportClock.getClock();
     }
 
     public Path getPathDir(){
@@ -200,7 +205,7 @@ public class Peer implements Runnable{
                     System.out::println
             );
         } catch(IOException io){
-            io.printStackTrace();
+            log.logDebug(io.getMessage());
         }
     }
 
@@ -249,5 +254,18 @@ public class Peer implements Runnable{
         new Thread(peer).start();
 
         return peer;
+    }
+
+    private static class LamportClock {
+        private int clock;
+
+        public void incrementClock(int clock) {
+            this.clock = clock+1;
+            log.log("=> Atualizando relogio para %s", getClock());
+        }
+
+        public int getClock() {
+            return clock;
+        }
     }
 }
