@@ -33,11 +33,8 @@ public class PeerHandler {
         return sb.toString();
     }
 
-    public static Collection<PeerInfo> getNeighborsToSend(String source) {
-        HashMap<String, PeerInfo> toSend = ((HashMap<String, PeerInfo>) neighbors.clone());
-        toSend.remove(source);
-
-        return toSend.values();
+    public static HashMap<String, PeerInfo> getNeighbors() {
+        return neighbors;
     }
 
     public static synchronized void changePeerStatus(String address){
