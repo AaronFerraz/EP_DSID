@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static Peer.PeerHandler.*;
@@ -89,9 +90,8 @@ public class Peer implements Runnable{
                         String status = arg[2];
                         String endNumber = arg[3];
 
-                        if (status.equals("ONLINE")) {
-                            addNeighborByAddress(String.format("%s:%s", ip, port));
-                        }
+                        addNeighborByAddress(String.format("%s:%s", ip, port), status);
+
                     }
                 }
             }
@@ -118,12 +118,16 @@ public class Peer implements Runnable{
     }
 
     public void addNeighborByAddress(String address) {
+        addNeighborByAddress(address, "ONLINE");
+    }
+
+    public void addNeighborByAddress(String address, String status) {
         PeerInfo pi = getNeighbor(address);
         if (pi == null) {
             addNeighbor(address, new PeerInfo(
                     address.split(":")[0],
                     Integer.parseInt(address.split(":")[1]),
-                    "ONLINE"
+                    status
             ));
 
         }
@@ -162,28 +166,32 @@ public class Peer implements Runnable{
     }
 
     public void listarPeersConhecidos(Socket clientSocket, String source) {
-        ArrayList<PeerInfo> neighborToSend = new ArrayList<PeerInfo>(getNeighborsToSend(source));
-
         StringBuilder sb = new StringBuilder();
-
-        neighborToSend.forEach(n ->
-                sb.append(n.toString())
-                .append(":")
-                .append(n.getStatus())
-                .append(":")
-                .append(0)
-                .append(" "));
+        AtomicInteger neighborsSize = new AtomicInteger();
+        getNeighbors().forEach((k,v) ->
+                {
+                    if (!k.equals(source)) {
+                        sb.append(k)
+                                .append(":")
+                                .append(v.getStatus())
+                                .append(":")
+                                .append(0)
+                                .append(" ");
+                        neighborsSize.getAndIncrement();
+                    }
+                }
+        );
 
         String answer = MessageHelper.createMessage(
                 ip,
                 port,
                 lamportClock.getClock(),
                 "PEER_LIST",
-                String.valueOf(neighborToSend.size()),
+                String.valueOf(neighborsSize.get()),
                 sb.toString().trim()
         );
 
-        MessageHandler.handleAnswerMessage(clientSocket, answer);
+        MessageHandler.handleAnswerMessage(clientSocket, answer, source);
     }
 
     public synchronized void incrementClock(int externalClock) {
@@ -221,7 +229,7 @@ public class Peer implements Runnable{
 //        Thread.currentThread().interrupt();
     }
 
-    public static Peer createAndStartPeer(String[] args) {
+    public static Peer createAndStartPeer(String[] args) throws InterruptedException {
         String ip,portString;
         int port;
 
@@ -251,7 +259,11 @@ public class Peer implements Runnable{
         }
 
         Peer peer = new Peer(ip, port, nomeArquivo, dirCompartilhado);
-        new Thread(peer).start();
+        Thread p = new Thread(peer);
+        p.start();
+
+        //Único jeito que pensei para a mensagem de início printar na ordem certa
+        Thread.sleep(100);
 
         return peer;
     }

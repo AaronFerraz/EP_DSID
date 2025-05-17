@@ -9,7 +9,7 @@ public class Eachare {
 
     private static final Logger log = LoggerFactory.getLogger(Eachare.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         Peer peer = Peer.createAndStartPeer(args);
 
         Scanner sc = new Scanner(System.in);

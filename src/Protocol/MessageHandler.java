@@ -21,8 +21,8 @@ public class MessageHandler {
             return serverBufferedReader.readLine();
         } catch (Exception e) {
             neighbor.setStatus("OFFLINE");
-            log.log("Falha ao enviar mensagem para %s", neighbor);
-            log.log(" === ERROR!!! === %n%s", e.getMessage());
+            log.logDebug(String.format("Falha ao enviar mensagem para %s", neighbor));
+            log.logDebug(String.format(" === ERROR!!! === %n%s", e.getMessage()));
 
             return "";
         }
@@ -32,7 +32,7 @@ public class MessageHandler {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
             String messageReceived;
             while ((messageReceived = reader.readLine()) != null) {
-                log.log("Mensagem recebida: %s", messageReceived);
+                log.log("Mensagem recebida: \"%s\"", messageReceived);
 
                 String[] msgSplit = messageReceived.split(" ", 4);
 
@@ -46,7 +46,7 @@ public class MessageHandler {
                 switch (type) {
                     case "HELLO":
                         peer.addNeighborByAddress(source);
-                        handleAnswerMessage(clientSocket,"");
+                        handleAnswerMessage(clientSocket,"", "");
                         break;
                     case "GET_PEERS":
                         peer.addNeighborByAddress(source);
@@ -54,7 +54,7 @@ public class MessageHandler {
                         break;
                     case "BYE":
                         peer.changeStatusPeer(source);
-                        handleAnswerMessage(clientSocket,"");
+                        handleAnswerMessage(clientSocket,"", "");
                         break;
                 }
             }
@@ -63,10 +63,12 @@ public class MessageHandler {
         }
     }
 
-    public static void handleAnswerMessage(Socket clientSocket, String answer) {
+    public static void handleAnswerMessage(Socket clientSocket, String answer, String source) {
         try {
             DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
             dataOutputStream.writeBytes(String.format("%s%n", answer));
+            if (!answer.isBlank())
+                log.log("Encaminhando mensagem \"%s\" para %s", answer, source);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
