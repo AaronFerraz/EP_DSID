@@ -7,6 +7,7 @@ import logger.LoggerFactory;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 
 public class MessageHandler {
     private static final Logger log = LoggerFactory.getLogger(MessageHandler.class);
@@ -36,6 +37,8 @@ public class MessageHandler {
 
                 String[] msgSplit = messageReceived.split(" ", 4);
 
+                log.logDebug(Arrays.toString(msgSplit));
+
                 String source = msgSplit[0];
                 int clock = Integer.parseInt(msgSplit[1]);
                 String type = msgSplit[2];
@@ -45,15 +48,22 @@ public class MessageHandler {
 
                 switch (type) {
                     case "HELLO":
-                        peer.addNeighborByAddress(source);
+                        peer.addNeighborByAddress(source, clock);
                         handleAnswerMessage(clientSocket,"", "");
                         break;
                     case "GET_PEERS":
-                        peer.addNeighborByAddress(source);
+                        peer.addNeighborByAddress(source, clock);
                         peer.listarPeersConhecidos(clientSocket, source);
                         break;
+                    case "LS":
+                        peer.addNeighborByAddress(source, clock);
+                        peer.ls_list(clientSocket, source);
+                        break;
+                    case "DL":
+                        peer.addNeighborByAddress(source, clock);
+                        peer.dlFile(clientSocket, source, args);
                     case "BYE":
-                        peer.changeStatusPeer(source);
+                        peer.changeStatusPeer(source, clock);
                         handleAnswerMessage(clientSocket,"", "");
                         break;
                 }

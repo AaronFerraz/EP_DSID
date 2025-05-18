@@ -1,5 +1,6 @@
 import Peer.Peer;
 import Peer.PeerInfo;
+import Peer.PeerFile;
 import logger.Logger;
 import logger.LoggerFactory;
 
@@ -40,6 +41,8 @@ public class Eachare {
                     peer.showDirectoryShared();
                     break;
                 case 4:
+                    PeerFile lsResult = peer.ls();
+                    peer.dl(lsResult);
                     break;
                 case 5:
                     break;

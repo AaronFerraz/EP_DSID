@@ -3,17 +3,21 @@ package Peer;
 import logger.Logger;
 import logger.LoggerFactory;
 
+import java.util.Objects;
+
 public class PeerInfo {
     private String ip;
     private int port;
     private String status;
+    private int clock;
 
     private static final Logger log = LoggerFactory.getLogger(PeerInfo.class);
 
-    public PeerInfo(String ip, int port, String status) {
+    public PeerInfo(String ip, int port, String status, int clock) {
         this.ip = ip;
         this.port = port;
         this.status = status;
+        this.clock = clock;
 
         log.log("Adicionando novo peer %s:%s status %s", ip,port,status);
     }
@@ -37,7 +41,17 @@ public class PeerInfo {
     }
 
     public void setStatus(String status) {
-        log.log("Atualizando peer %s status %s", this, status);
-        this.status = status;
+        if (!this.status.equals(status)) {
+            log.log("Atualizando peer %s status %s", this, status);
+            this.status = status;
+        }
+    }
+
+    public int getClock() {
+        return clock;
+    }
+
+    public void setClock(int clock) {
+        this.clock = clock;
     }
 }
