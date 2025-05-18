@@ -374,13 +374,15 @@ public class Peer implements Runnable{
 
                 String fileName = rawMessage[3];
                 int firstNumber = Integer.parseInt(rawMessage[4]);
-                int secondNumber = Integer.parseInt(rawMessage[4]);
+                int secondNumber = Integer.parseInt(rawMessage[5]);
                 String base64Encoded = rawMessage[6];
 
                 Boolean success = PeerHandler.writeFileToPath(this.path, fileName, base64Encoded);
 
-                if (success)
+                if (success) {
+                    this.files.put(fileName, lsResult);
                     log.log("Download do arquivo %s finalizado.", fileName);
+                }
             }
         }
     }

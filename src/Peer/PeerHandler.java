@@ -36,7 +36,7 @@ public class PeerHandler {
         neighbors.forEach((k,i) -> {
             n.getAndIncrement();
             tempPeerMap.put(n.get(), i);
-            sb.append(String.format("[%s] %s %s - %s %n", n, i, i.getStatus(), i.getClock()));
+            sb.append(String.format("[%s] %s %s %n", n, i, i.getStatus()));
         });
 
         return sb.toString();
