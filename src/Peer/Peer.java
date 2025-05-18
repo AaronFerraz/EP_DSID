@@ -77,7 +77,7 @@ public class Peer implements Runnable{
                 int externalClock = Integer.parseInt(rawMessage[1]);
                 incrementClock(externalClock);
 
-                addNeighborByAddress(source);
+                addNeighborByAddress(source, externalClock);
 
                 int peerQtt = Integer.parseInt(rawMessage[3]);
 
@@ -88,9 +88,9 @@ public class Peer implements Runnable{
                         String ip = arg[0];
                         int port = Integer.parseInt(arg[1]);
                         String status = arg[2];
-                        String endNumber = arg[3];
+                        int clock = Integer.parseInt(arg[3]);
 
-                        addNeighborByAddress(String.format("%s:%s", ip, port), status);
+                        addNeighborByAddress(String.format("%s:%s", ip, port), status, clock);
 
                     }
                 }
@@ -106,7 +106,7 @@ public class Peer implements Runnable{
                 if (parts.length == 2) {
                     String ip = parts[0];
                     int port = Integer.parseInt(parts[1]);
-                    addNeighbor(String.format("%s:%s",ip,port), new PeerInfo(ip, port, "OFFLINE"));
+                    addNeighbor(String.format("%s:%s",ip,port), new PeerInfo(ip, port, "OFFLINE", 0));
                 }
             }
         } catch (IOException e) {
@@ -117,22 +117,24 @@ public class Peer implements Runnable{
         }
     }
 
-    public void addNeighborByAddress(String address) {
-        addNeighborByAddress(address, "ONLINE");
+    public void addNeighborByAddress(String address, int clock) {
+        addNeighborByAddress(address, "ONLINE", clock);
     }
 
-    public void addNeighborByAddress(String address, String status) {
+    public void addNeighborByAddress(String address, String status, int clock) {
         PeerInfo pi = getNeighbor(address);
         if (pi == null) {
             addNeighbor(address, new PeerInfo(
                     address.split(":")[0],
                     Integer.parseInt(address.split(":")[1]),
-                    status
+                    status,
+                    clock
             ));
 
         }
-        else if (pi.getStatus().equals("OFFLINE")){
-            pi.setStatus("ONLINE");
+        else if (clock > pi.getClock()) {
+            pi.setClock(clock);
+            pi.setStatus(status);
         }
     }
 
@@ -175,7 +177,7 @@ public class Peer implements Runnable{
                                 .append(":")
                                 .append(v.getStatus())
                                 .append(":")
-                                .append(0)
+                                .append(v.getClock())
                                 .append(" ");
                         neighborsSize.getAndIncrement();
                     }
@@ -217,8 +219,8 @@ public class Peer implements Runnable{
         }
     }
 
-    public void changeStatusPeer(String address){
-        PeerHandler.changePeerStatus(address );
+    public void changeStatusPeer(String address, int clock){
+        PeerHandler.changePeerStatus(address, clock);
     }
 
     public void bye() {
@@ -226,7 +228,6 @@ public class Peer implements Runnable{
 
         exit(this);
 
-//        Thread.currentThread().interrupt();
     }
 
     public static Peer createAndStartPeer(String[] args) throws InterruptedException {

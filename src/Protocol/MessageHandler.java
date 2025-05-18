@@ -45,15 +45,15 @@ public class MessageHandler {
 
                 switch (type) {
                     case "HELLO":
-                        peer.addNeighborByAddress(source);
+                        peer.addNeighborByAddress(source, clock);
                         handleAnswerMessage(clientSocket,"", "");
                         break;
                     case "GET_PEERS":
-                        peer.addNeighborByAddress(source);
+                        peer.addNeighborByAddress(source, clock);
                         peer.listarPeersConhecidos(clientSocket, source);
                         break;
                     case "BYE":
-                        peer.changeStatusPeer(source);
+                        peer.changeStatusPeer(source, clock);
                         handleAnswerMessage(clientSocket,"", "");
                         break;
                 }
