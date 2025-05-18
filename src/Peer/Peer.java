@@ -8,13 +8,11 @@ import logger.LoggerFactory;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 import static Peer.PeerHandler.*;
 
@@ -24,6 +22,7 @@ public class Peer implements Runnable{
     private final String neighborsFilePath;
     private final LamportClock lamportClock;
     private final Path path;
+    private final HashMap<String, PeerFile> files;
 
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
 
@@ -33,6 +32,7 @@ public class Peer implements Runnable{
         this.neighborsFilePath = neighborsFilePath;
         this.path = Path.of(sharedDirPath);
         this.lamportClock = new LamportClock();
+        this.files = new HashMap<>();
     }
 
     @Override
@@ -40,6 +40,7 @@ public class Peer implements Runnable{
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             log.log("Servidor iniciado em " + ip + ":" + port, true);
             neighborsDiscovery();
+            filesDiscovery();
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 new Thread(() -> MessageHandler.handleReceiveMessage(this, clientSocket)).start();
@@ -50,6 +51,8 @@ public class Peer implements Runnable{
             System.exit(1);
         }
     }
+
+
 
     public String sendMessage(PeerInfo pi, String message, String... arguments) {
         incrementClock(0);
@@ -117,6 +120,25 @@ public class Peer implements Runnable{
         }
     }
 
+    private void filesDiscovery() {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(getPathDir())) {
+            for (Path entry : stream) {
+                if (Files.isRegularFile(entry)) {
+                    byte[] fileBytes = Files.readAllBytes(entry);
+                    String base64 = Base64.getEncoder().encodeToString(fileBytes);
+                    PeerFile data = new PeerFile(
+                            entry.getFileName().toString(),
+                            Files.size(entry),
+                            base64
+                    );
+                    this.files.put(entry.getFileName().toString(), data);
+                }
+            }
+        } catch (IOException e) {
+            log.logDebug(e.getMessage());
+        }
+    }
+
     public void addNeighborByAddress(String address, int clock) {
         addNeighborByAddress(address, "ONLINE", clock);
     }
@@ -170,10 +192,10 @@ public class Peer implements Runnable{
     public void listarPeersConhecidos(Socket clientSocket, String source) {
         StringBuilder sb = new StringBuilder();
         AtomicInteger neighborsSize = new AtomicInteger();
-        getNeighbors().forEach((k,v) ->
+        getNeighborsAsList().forEach(v ->
                 {
-                    if (!k.equals(source)) {
-                        sb.append(k)
+                    if (!v.toString().equals(source)) {
+                        sb.append(v)
                                 .append(":")
                                 .append(v.getStatus())
                                 .append(":")
@@ -196,6 +218,60 @@ public class Peer implements Runnable{
         MessageHandler.handleAnswerMessage(clientSocket, answer, source);
     }
 
+    public PeerFile ls() {
+        HashMap<Integer, PeerFile> files = new HashMap<>();
+        AtomicInteger n = new AtomicInteger();
+
+        getNeighborsAsList().forEach(v ->
+        {
+            if (v.getStatus().equals("ONLINE")) {
+                String answer = sendMessage(v, "LS");
+
+                if (!answer.isBlank()) {
+                    String[] rawMessage = answer.split(" ");
+
+                    String source = rawMessage[0];
+                    int externalClock = Integer.parseInt(rawMessage[1]);
+                    incrementClock(externalClock);
+
+                    addNeighborByAddress(source, externalClock);
+
+                    int fileQtt = Integer.parseInt(rawMessage[3]);
+
+                    if (fileQtt > 0) {
+                        for (int j = 4; j <= 3 + fileQtt; j++) {
+                            String[] arg = rawMessage[j].split(":");
+
+                            String fileName = arg[0];
+                            int fileSize = Integer.parseInt(arg[1]);
+
+                            files.put(n.incrementAndGet(), new PeerFile(
+                                    fileName,
+                                    fileSize,
+                                    v
+                            ));
+                        }
+                    }
+                }
+            }
+        });
+
+        String message = buildLsListMessage(files);
+
+        log.log(message);
+
+        Scanner in = new Scanner(System.in);
+        int escolha;
+        PeerFile pi;
+        do {
+            log.log("> ", false);
+            escolha = in.nextInt();
+            pi = files.get(escolha);
+        } while (pi == null && escolha != 0);
+
+        return pi;
+    }
+
     public synchronized void incrementClock(int externalClock) {
         int newClock = Math.max(externalClock, getClock());
         lamportClock.incrementClock(newClock);
@@ -210,13 +286,8 @@ public class Peer implements Runnable{
     }
 
     public void showDirectoryShared(){
-        try(Stream<Path> paths = Files.list(getPathDir())){
-            paths.map(Path::getFileName).forEach(
-                    System.out::println
-            );
-        } catch(IOException io){
-            log.logDebug(io.getMessage());
-        }
+        this.files.forEach((k,f) ->
+                log.log(f.getFileName()));
     }
 
     public void changeStatusPeer(String address, int clock){
@@ -267,6 +338,73 @@ public class Peer implements Runnable{
         Thread.sleep(100);
 
         return peer;
+    }
+
+    public void ls_list(Socket clientSocket, String source) {
+        StringBuilder sb = new StringBuilder();
+        this.files.forEach((k,f) ->
+                sb.append(f.getFileName()).append(":").append(f.getFileSize()).append(" "));
+        String answer = MessageHelper.createMessage(
+                ip,
+                port,
+                lamportClock.getClock(),
+                "LS_LIST",
+                String.valueOf(this.files.size()),
+                sb.toString().trim()
+        );
+
+        MessageHandler.handleAnswerMessage(clientSocket, answer, source);
+
+    }
+
+    public void dl(PeerFile lsResult) {
+        if (lsResult != null) {
+            PeerInfo pi = lsResult.getFileSource();
+            String dlAnswer = sendMessage(pi, "DL", lsResult.getFileName(), "0", "0");
+
+            if (!dlAnswer.isBlank()) {
+                String[] rawMessage = dlAnswer.split(" ");
+
+                String source = rawMessage[0];
+
+                int externalClock = Integer.parseInt(rawMessage[1]);
+                incrementClock(externalClock);
+
+                addNeighborByAddress(source, externalClock);
+
+                String fileName = rawMessage[3];
+                int firstNumber = Integer.parseInt(rawMessage[4]);
+                int secondNumber = Integer.parseInt(rawMessage[4]);
+                String base64Encoded = rawMessage[6];
+
+                Boolean success = PeerHandler.writeFileToPath(this.path, fileName, base64Encoded);
+
+                if (success)
+                    log.log("Download do arquivo %s finalizado.", fileName);
+            }
+        }
+    }
+
+    public void dlFile(Socket clientSocket, String source, String args) {
+        String[] arguments = args.split(" ");
+        String fileName = arguments[0];
+        String firstNumber = arguments[1];
+        String secondNumber = arguments[2];
+
+        PeerFile pf = this.files.get(fileName);
+
+        String answer = MessageHelper.createMessage(
+                ip,
+                port,
+                lamportClock.getClock(),
+                "FILE",
+                fileName,
+                "0",
+                "0",
+                pf.getBase64()
+        );
+
+        MessageHandler.handleAnswerMessage(clientSocket, answer, source);
     }
 
     private static class LamportClock {
