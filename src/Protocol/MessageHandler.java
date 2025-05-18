@@ -62,6 +62,7 @@ public class MessageHandler {
                     case "DL":
                         peer.addNeighborByAddress(source, clock);
                         peer.dlFile(clientSocket, source, args);
+                        break;
                     case "BYE":
                         peer.changeStatusPeer(source, clock);
                         handleAnswerMessage(clientSocket,"", "");
