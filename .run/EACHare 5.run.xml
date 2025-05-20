@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="EACHare 5" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="Eachare" />
+    <module name="EP_DSID" />
+    <option name="PROGRAM_PARAMETERS" value="127.0.0.1:9005 files/peer5.txt files/p5/" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

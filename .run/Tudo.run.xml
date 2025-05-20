@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tudo" type="CompoundRunConfigurationType">
+    <toRun name="EACHare 1" type="Application" />
+    <toRun name="EACHare 2" type="Application" />
+    <toRun name="EACHare 3" type="Application" />
+    <toRun name="EACHare 4" type="Application" />
+    <toRun name="EACHare 5" type="Application" />
+    <method v="2" />
+  </configuration>
+</component>
