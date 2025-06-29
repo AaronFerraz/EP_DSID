@@ -278,6 +278,8 @@ public class Peer implements Runnable{
     }
 
     public void setChunk() {
+        log.log("Digite novo tamanho de chunk: ");
+        System.out.print("> ");
         Scanner in = new Scanner(System.in);
         this.chunk = in.nextInt();
     }
@@ -400,11 +402,12 @@ public class Peer implements Runnable{
 
             stats.get(key).novaAmostra(finish);
 
-            Boolean success = writeFileToPath(this.path, fileName, fileBytes);
+            byte[] bytes = getFileBytes(fileBytes);
+
+            Boolean success = writeFileToPath(this.path, fileName, bytes);
 
             if (success) {
-                //TODO add listener for new files
-                //this.ownFiles.put(fileName, pf);
+                this.ownFiles.put(fileName, new PeerFile(fileName, size, bytes));
                 log.log("Download do arquivo %s finalizado.", fileName);
             }
 

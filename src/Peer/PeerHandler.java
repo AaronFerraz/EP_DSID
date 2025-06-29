@@ -68,22 +68,9 @@ public class PeerHandler {
         }
     }
 
-    public static synchronized Boolean writeFileToPath(Path path, String fileName, String[] base64Encoded) {
+    public static synchronized Boolean writeFileToPath(Path path, String fileName, byte[] bytes) {
         try {
-            ArrayList<Byte> fileBytes = new ArrayList<>();
-            for (String s : base64Encoded) {
-                byte[] bs = Base64.getDecoder().decode(s.trim());
-                for (byte b : bs) {
-                    fileBytes.add(b);
-                }
-            }
-
             Path outputFile = path.resolve(fileName);
-            byte[] bytes = new byte[fileBytes.size()];
-            for (int i = 0; i < fileBytes.size(); i++) {
-                Byte b = fileBytes.get(i);
-                bytes[i] = b;
-            }
             Files.write(outputFile, bytes);
 
             return true;
@@ -92,6 +79,25 @@ public class PeerHandler {
 
             return false;
         }
+    }
+
+    public static byte[] getFileBytes(String[] base64Encoded) {
+        ArrayList<Byte> fileBytes = new ArrayList<>();
+        for (String s : base64Encoded) {
+            byte[] bs = Base64.getDecoder().decode(s.trim());
+            for (byte b : bs) {
+                fileBytes.add(b);
+            }
+        }
+
+
+        byte[] bytes = new byte[fileBytes.size()];
+        for (int i = 0; i < fileBytes.size(); i++) {
+            Byte b = fileBytes.get(i);
+            bytes[i] = b;
+        }
+
+        return bytes;
     }
 
     public static synchronized void exit(Peer peer) {
