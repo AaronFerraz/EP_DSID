@@ -4,6 +4,7 @@ import Peer.PeerFile;
 import logger.Logger;
 import logger.LoggerFactory;
 
+import java.util.List;
 import java.util.Scanner;
 
 public class Eachare {
@@ -41,10 +42,11 @@ public class Eachare {
                     peer.showDirectoryShared();
                     break;
                 case 4:
-                    PeerFile lsResult = peer.ls();
+                    List<PeerFile> lsResult = peer.ls();
                     peer.dl(lsResult);
                     break;
                 case 5:
+                    peer.showStatistics();
                     break;
                 case 6:
                     peer.setChunk();

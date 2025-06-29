@@ -1,16 +1,24 @@
 package Peer;
 
+import logger.Logger;
+import logger.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.Base64;
+
 public class PeerFile {
 
-    private long fileSize;
-    private String fileName;
-    private PeerInfo fileSource;
-    private String base64;
+    private static final Logger log = LoggerFactory.getLogger(PeerFile.class);
 
-    public PeerFile(String fileName, long fileSize, String base64) {
+    private final long fileSize;
+    private final String fileName;
+    private PeerInfo fileSource;
+    private byte[] bytes;
+
+    public PeerFile(String fileName, long fileSize, byte[] bytes) {
         this.fileSize = fileSize;
         this.fileName = fileName;
-        this.base64 = base64;
+        this.bytes = bytes;
     }
 
     public PeerFile(String fileName, long fileSize, PeerInfo fileSource) {
@@ -31,7 +39,20 @@ public class PeerFile {
         return fileSource;
     }
 
-    public String getBase64() {
-        return base64;
+
+    public byte[] getBytesByChunk(int chunk, int index) {
+        int start = chunk*index;
+        log.logDebug(String.valueOf(start));
+        int end = start+chunk;
+        if (end > bytes.length) end = bytes.length;
+
+        log.logDebug(String.valueOf(end));
+
+        return Arrays.copyOfRange(bytes, start, end);
+    }
+
+    @Override
+    public String toString(){
+        return getFileName()+":"+getFileSize();
     }
 }
