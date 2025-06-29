@@ -22,7 +22,10 @@ public class Peer implements Runnable{
     private final String neighborsFilePath;
     private final LamportClock lamportClock;
     private final Path path;
-    private final HashMap<String, PeerFile> files;
+    private final HashMap<String, PeerFile> ownFiles;
+    private int chunk;
+    private final HashMap<String, PeerStats> stats;
+    private final Timer timer;
 
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
 
@@ -32,7 +35,10 @@ public class Peer implements Runnable{
         this.neighborsFilePath = neighborsFilePath;
         this.path = Path.of(sharedDirPath);
         this.lamportClock = new LamportClock();
-        this.files = new HashMap<>();
+        this.ownFiles = new HashMap<>();
+        this.chunk = 256;
+        this.stats = new HashMap<String, PeerStats>();
+        this.timer = new Timer();
     }
 
     @Override
@@ -51,8 +57,6 @@ public class Peer implements Runnable{
             System.exit(1);
         }
     }
-
-
 
     public String sendMessage(PeerInfo pi, String message, String... arguments) {
         incrementClock(0);
@@ -125,13 +129,12 @@ public class Peer implements Runnable{
             for (Path entry : stream) {
                 if (Files.isRegularFile(entry)) {
                     byte[] fileBytes = Files.readAllBytes(entry);
-                    String base64 = Base64.getEncoder().encodeToString(fileBytes);
                     PeerFile data = new PeerFile(
                             entry.getFileName().toString(),
                             Files.size(entry),
-                            base64
+                            fileBytes
                     );
-                    this.files.put(entry.getFileName().toString(), data);
+                    this.ownFiles.put(entry.getFileName().toString(), data);
                 }
             }
         } catch (IOException e) {
@@ -139,11 +142,11 @@ public class Peer implements Runnable{
         }
     }
 
-    public void addNeighborByAddress(String address, int clock) {
+    public synchronized void addNeighborByAddress(String address, int clock) {
         addNeighborByAddress(address, "ONLINE", clock);
     }
 
-    public void addNeighborByAddress(String address, String status, int clock) {
+    public synchronized void addNeighborByAddress(String address, String status, int clock) {
         PeerInfo pi = getNeighbor(address);
         if (pi == null) {
             addNeighbor(address, new PeerInfo(
@@ -218,8 +221,9 @@ public class Peer implements Runnable{
         MessageHandler.handleAnswerMessage(clientSocket, answer, source);
     }
 
-    public PeerFile ls() {
-        HashMap<Integer, PeerFile> files = new HashMap<>();
+    public List<PeerFile> ls() {
+        HashMap<String, List<PeerFile>> files = new HashMap<>();
+        HashMap<Integer, String> indexFileByKey = new HashMap<>();
         AtomicInteger n = new AtomicInteger();
 
         getNeighborsAsList().forEach(v ->
@@ -244,32 +248,38 @@ public class Peer implements Runnable{
 
                             String fileName = arg[0];
                             int fileSize = Integer.parseInt(arg[1]);
+                            String key = fileName+":"+fileSize;
 
-                            files.put(n.incrementAndGet(), new PeerFile(
-                                    fileName,
-                                    fileSize,
-                                    v
-                            ));
+                            if (!files.containsKey(key)) {
+                                files.put(key, new ArrayList<>());
+                                indexFileByKey.put(n.incrementAndGet(), key);
+                            }
+                            files.get(key).add(new PeerFile(fileName, fileSize, v));
                         }
                     }
                 }
             }
         });
 
-        String message = buildLsListMessage(files);
+        String message = buildLsListMessage(indexFileByKey, files);
 
         log.log(message);
 
         Scanner in = new Scanner(System.in);
         int escolha;
-        PeerFile pi;
+        String piKey;
         do {
             log.log("> ", false);
             escolha = in.nextInt();
-            pi = files.get(escolha);
-        } while (pi == null && escolha != 0);
+            piKey = indexFileByKey.get(escolha);
+        } while (piKey == null && escolha != 0);
+        timer.start();
+        return files.get(piKey);
+    }
 
-        return pi;
+    public void setChunk() {
+        Scanner in = new Scanner(System.in);
+        this.chunk = in.nextInt();
     }
 
     public synchronized void incrementClock(int externalClock) {
@@ -286,12 +296,12 @@ public class Peer implements Runnable{
     }
 
     public void showDirectoryShared(){
-        this.files.forEach((k,f) ->
+        this.ownFiles.forEach((k, f) ->
                 log.log(f.getFileName()));
     }
 
     public void changeStatusPeer(String address, int clock){
-        PeerHandler.changePeerStatus(address, clock);
+        changePeerStatus(address, clock);
     }
 
     public void bye() {
@@ -342,14 +352,14 @@ public class Peer implements Runnable{
 
     public void ls_list(Socket clientSocket, String source) {
         StringBuilder sb = new StringBuilder();
-        this.files.forEach((k,f) ->
+        this.ownFiles.forEach((k, f) ->
                 sb.append(f.getFileName()).append(":").append(f.getFileSize()).append(" "));
         String answer = MessageHelper.createMessage(
                 ip,
                 port,
                 lamportClock.getClock(),
                 "LS_LIST",
-                String.valueOf(this.files.size()),
+                String.valueOf(this.ownFiles.size()),
                 sb.toString().trim()
         );
 
@@ -357,10 +367,55 @@ public class Peer implements Runnable{
 
     }
 
-    public void dl(PeerFile lsResult) {
-        if (lsResult != null) {
-            PeerInfo pi = lsResult.getFileSource();
-            String dlAnswer = sendMessage(pi, "DL", lsResult.getFileName(), "0", "0");
+    public void dl(List<PeerFile> lsResult) throws InterruptedException {
+        if (lsResult != null && !lsResult.isEmpty()) {
+            long size = lsResult.get(0).getFileSize();
+            int indexes = Math.toIntExact(size / this.chunk);
+            if (size % this.chunk != 0) indexes++;
+            String[] fileBytes = new String[indexes];
+            String fileName = "";
+            
+            List<Runnable> threads = new ArrayList<>();
+            for (int i = 0; i < indexes; i++) {
+                int index = i % lsResult.size();
+                PeerFile pf = lsResult.get(index);
+                fileName = pf.getFileName();
+                Runnable r = getRunnable(pf, i, fileBytes);
+                threads.add(r);
+            }
+
+            for (Runnable r : threads) {
+                Thread t = new Thread(r);
+                t.start();
+                t.join();
+            }
+
+            long finish = timer.finish();
+
+            String key = this.chunk+":"+lsResult.size()+":"+size;
+
+            if (!stats.containsKey(key)) {
+                stats.put(key, new PeerStats(String.valueOf(this.chunk), String.valueOf(lsResult.size()), String.valueOf(size)));
+            }
+
+            stats.get(key).novaAmostra(finish);
+
+            Boolean success = writeFileToPath(this.path, fileName, fileBytes);
+
+            if (success) {
+                //TODO add listener for new files
+                //this.ownFiles.put(fileName, pf);
+                log.log("Download do arquivo %s finalizado.", fileName);
+            }
+
+
+        }
+    }
+
+    private Runnable getRunnable(PeerFile pf, int i, String[] fileBytes) {
+        PeerInfo pi = pf.getFileSource();
+        return () -> {
+            String dlAnswer = sendMessage(pi, "DL", pf.getFileName(), String.valueOf(this.chunk), String.valueOf(i));
 
             if (!dlAnswer.isBlank()) {
                 String[] rawMessage = dlAnswer.split(" ");
@@ -372,28 +427,25 @@ public class Peer implements Runnable{
 
                 addNeighborByAddress(source, externalClock);
 
-                String fileName = rawMessage[3];
-                int firstNumber = Integer.parseInt(rawMessage[4]);
-                int secondNumber = Integer.parseInt(rawMessage[5]);
+                int chunk = Integer.parseInt(rawMessage[4]);
+                int indexMsg = Integer.parseInt(rawMessage[5]);
                 String base64Encoded = rawMessage[6];
 
-                Boolean success = PeerHandler.writeFileToPath(this.path, fileName, base64Encoded);
+                fileBytes[indexMsg] = base64Encoded;
 
-                if (success) {
-                    this.files.put(fileName, lsResult);
-                    log.log("Download do arquivo %s finalizado.", fileName);
-                }
             }
-        }
+        };
     }
 
     public void dlFile(Socket clientSocket, String source, String args) {
         String[] arguments = args.split(" ");
         String fileName = arguments[0];
-        String firstNumber = arguments[1];
-        String secondNumber = arguments[2];
+        String chunk = arguments[1];
+        String index = arguments[2];
 
-        PeerFile pf = this.files.get(fileName);
+        PeerFile pf = this.ownFiles.get(fileName);
+
+        byte[] bytes = pf.getBytesByChunk(Integer.parseInt(chunk), Integer.parseInt(index));
 
         String answer = MessageHelper.createMessage(
                 ip,
@@ -401,12 +453,22 @@ public class Peer implements Runnable{
                 lamportClock.getClock(),
                 "FILE",
                 fileName,
-                "0",
-                "0",
-                pf.getBase64()
+                String.valueOf(bytes.length),
+                index,
+                Base64.getEncoder().encodeToString(bytes)
         );
 
         MessageHandler.handleAnswerMessage(clientSocket, answer, source);
+    }
+
+    public void showStatistics() {
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Tam. chunk | N peers | Tam. arquivo | N | Tempo [s] | Desvio\n");
+
+        stats.forEach((s, ps) -> sb.append(ps.buildMessage()));
+
+        log.log(sb.toString());
     }
 
     private static class LamportClock {
@@ -419,6 +481,18 @@ public class Peer implements Runnable{
 
         public int getClock() {
             return clock;
+        }
+    }
+
+    private static class Timer {
+        private long startTime;
+
+        public void start() {
+            startTime = System.nanoTime();
+        }
+
+        public long finish() {
+            return System.nanoTime() - startTime;
         }
     }
 }

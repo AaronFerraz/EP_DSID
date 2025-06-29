@@ -37,7 +37,7 @@ public class MessageHandler {
 
                 String[] msgSplit = messageReceived.split(" ", 4);
 
-                log.logDebug(Arrays.toString(msgSplit));
+                //log.logDebug(Arrays.toString(msgSplit));
 
                 String source = msgSplit[0];
                 int clock = Integer.parseInt(msgSplit[1]);

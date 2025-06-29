@@ -6,9 +6,7 @@ import logger.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PeerHandler {
@@ -42,12 +40,21 @@ public class PeerHandler {
         return sb.toString();
     }
 
-    public static String buildLsListMessage(HashMap<Integer, PeerFile> files) {
+    public static String buildLsListMessage(HashMap<Integer, String> indexFileByKey, HashMap<String, List<PeerFile>> files) {
         StringBuilder sb = new StringBuilder();
         sb.append("     Nome | Tamanho | Peer %n");
         sb.append(String.format("[%s] %s | %s | %s %n",0,"<Cancelar>"," ", " "));
-        files.forEach((k,v) ->
-                sb.append(String.format("[%s] %s | %s | %s %n",k,v.getFileName(),v.getFileSize(), v.getFileSource())));
+        indexFileByKey.forEach((k,v) -> {
+            List<PeerFile> fileList = files.get(v);
+            StringBuilder fileSource = new StringBuilder();
+            fileList.forEach(f -> fileSource.append(f.getFileSource()).append(", "));
+            String fileName = v.split(":")[0];
+            String fileSize = v.split(":")[1];
+            String fileSourceString = fileSource.toString();
+            fileSourceString = fileSourceString.substring(0, fileSourceString.length()-2);
+            sb.append(String.format("[%s] %s | %s | %s %n", k, fileName, fileSize, fileSourceString));
+        });
+
 
         return sb.toString().trim();
     }
@@ -61,11 +68,23 @@ public class PeerHandler {
         }
     }
 
-    public static synchronized Boolean writeFileToPath(Path path, String fileName, String base64Encoded) {
+    public static synchronized Boolean writeFileToPath(Path path, String fileName, String[] base64Encoded) {
         try {
-            byte[] fileBytes = Base64.getDecoder().decode(base64Encoded);
+            ArrayList<Byte> fileBytes = new ArrayList<>();
+            for (String s : base64Encoded) {
+                byte[] bs = Base64.getDecoder().decode(s.trim());
+                for (byte b : bs) {
+                    fileBytes.add(b);
+                }
+            }
+
             Path outputFile = path.resolve(fileName);
-            Files.write(outputFile, fileBytes);
+            byte[] bytes = new byte[fileBytes.size()];
+            for (int i = 0; i < fileBytes.size(); i++) {
+                Byte b = fileBytes.get(i);
+                bytes[i] = b;
+            }
+            Files.write(outputFile, bytes);
 
             return true;
         } catch (IOException e) {
