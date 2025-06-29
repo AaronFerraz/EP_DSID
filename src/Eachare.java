@@ -47,6 +47,7 @@ public class Eachare {
                 case 5:
                     break;
                 case 6:
+                    peer.setChunk();
                     break;
                 case 9:
                     peer.bye();

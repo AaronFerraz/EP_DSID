@@ -23,6 +23,7 @@ public class Peer implements Runnable{
     private final LamportClock lamportClock;
     private final Path path;
     private final HashMap<String, PeerFile> files;
+    private int chunk;
 
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
 
@@ -33,6 +34,7 @@ public class Peer implements Runnable{
         this.path = Path.of(sharedDirPath);
         this.lamportClock = new LamportClock();
         this.files = new HashMap<>();
+        this.chunk = 256;
     }
 
     @Override
@@ -51,8 +53,6 @@ public class Peer implements Runnable{
             System.exit(1);
         }
     }
-
-
 
     public String sendMessage(PeerInfo pi, String message, String... arguments) {
         incrementClock(0);
@@ -270,6 +270,11 @@ public class Peer implements Runnable{
         } while (pi == null && escolha != 0);
 
         return pi;
+    }
+
+    public void setChunk() {
+        Scanner in = new Scanner(System.in);
+        this.chunk = in.nextInt();
     }
 
     public synchronized void incrementClock(int externalClock) {
